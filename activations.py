@@ -35,3 +35,14 @@ class Activation_Sigmoid:
   def backward(self, dvalues):
     # Derivative - calculates from output of the sigmoid function
     self.dinputs = dvalues * (1 - self.output) * self.output
+
+class Activation_Linear:
+
+  def forward(self, inputs):
+    # Just remember values
+    self.inputs = inputs
+    self.output = inputs
+
+  def backward(self, dvalues):
+    # derivaitve is 1, 1 * dvalues = dvalues - the chain rule
+    self.dinputs = dvalues.copy()
