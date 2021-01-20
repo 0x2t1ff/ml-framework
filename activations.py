@@ -30,7 +30,7 @@ class Activation_Sigmoid:
     # Save input and calculate/save output
     # of the sigmoid function
     self.inputs = inputs
-    self.output = 1 / (1 + np.expj(-inputs))
+    self.output = 1 / (1 + np.exp(-inputs))
 
   def backward(self, dvalues):
     # Derivative - calculates from output of the sigmoid function
