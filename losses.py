@@ -3,42 +3,52 @@ from activations import *
 
 class Loss:
 
-  def calculate(self, output, y):
-    sample_losses = self.forward(output, y)
-    data_loss = np.mean(sample_losses)
-    return data_loss
+  def remember_trainable_layers(self, trainable_layers):
+    self.trainable_layers = trainable_layers
 
-  def regularization_loss(self, layer):
+
+  def calculate(self, output, y, *, include_regularization=False):
+    sample_losses = self.forward(output, y)
+
+    data_loss = np.mean(sample_losses)
+
+    if not include_regularization:
+      return data_loss
+
+    return data_loss, self.regularization_loss()
+
+  def regularization_loss(self):
    
     # 0 by default
     regularization_loss = 0
 
-    # L1 regularization - weights
-    # calculate only when factor greater than 0
-    if layer.weight_regularizer_l1 > 0:
-      regularization_loss += layer.weight_regularizer_l1 * \
-                             np.sum(np.abs(layer.weights))
-    
-    # L2 regularization - weights 
-    if layer.weight_regularizer_l2 > 0:
-      regularization_loss += layer.weight_regularizer_l2 * \
-                             np.sum(layer.weights * layer.weights)
-    
-    # L1 regularization - biases
-    # calculate only when factor greater than 0
-    if layer.bias_regularizer_l1 > 0:
-      regularization_loss += layer.bias_regularizer_l1 * \
-                             np.sum(np.abs(layer.biases))
-    
-    # L2 regularization - biases 
-    if layer.bias_regularizer_l2 > 0:
-      regularization_loss += layer.bias_regularizer_l2 * \
-                             np.sum(layer.biases * layer.biases)
+    for layer in self.trainable_layers:
+      # L1 regularization - weights
+      # calculate only when factor greater than 0
+      if layer.weight_regularizer_l1 > 0:
+        regularization_loss += layer.weight_regularizer_l1 * \
+                               np.sum(np.abs(layer.weights))
+      
+      # L2 regularization - weights 
+      if layer.weight_regularizer_l2 > 0:
+        regularization_loss += layer.weight_regularizer_l2 * \
+                               np.sum(layer.weights * layer.weights)
+      
+      # L1 regularization - biases
+      # calculate only when factor greater than 0
+      if layer.bias_regularizer_l1 > 0:
+        regularization_loss += layer.bias_regularizer_l1 * \
+                               np.sum(np.abs(layer.biases))
+      
+      # L2 regularization - biases 
+      if layer.bias_regularizer_l2 > 0:
+        regularization_loss += layer.bias_regularizer_l2 * \
+                               np.sum(layer.biases * layer.biases)
 
     return regularization_loss
     
     
-class Loss_CategoricalCrossEntropy(Loss):
+class Loss_CategoricalCrossentropy(Loss):
     def forward(self, y_pred, y_true):
         samples = len(y_pred)
         y_pred_clipped = np.clip(y_pred, 1e-7, 1 - 1e-7)
@@ -69,15 +79,6 @@ class Loss_CategoricalCrossEntropy(Loss):
         
 
 class Activation_Softmax_Loss_CategoricalCrossEntropy(Loss):
-    
-    def __init__(self):
-        self.activation = Activation_Softmax()
-        self.loss = Loss_CategoricalCrossEntropy()
-    
-    def forward(self, inputs, y_true):
-        self.activation.forward(inputs)
-        self.output = self.activation.output
-        return self.loss.calculate(self.output, y_true)
     
     def backward(self, dvalues, y_true):
         samples = len(dvalues)

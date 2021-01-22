@@ -5,7 +5,7 @@ class Dense_Layer:
   def __init__(self, n_inputs, n_neurons, 
                weight_regularizer_l1=0, weight_regularizer_l2=0,
                bias_regularizer_l1=0, bias_regularizer_l2=0):
-    self.weights = 0.1 * np.random.randn(n_inputs, n_neurons)
+    self.weights = 0.01 * np.random.randn(n_inputs, n_neurons)
     self.biases = np.zeros((1, n_neurons))
     self.weight_regularizer_l1 = weight_regularizer_l1
     self.weight_regularizer_l2 = weight_regularizer_l2
@@ -13,7 +13,7 @@ class Dense_Layer:
     self.bias_regularizer_l2 = bias_regularizer_l2
 
     
-  def forward(self, inputs):
+  def forward(self, inputs, training):
     self.output = np.dot(inputs, self.weights) + self.biases
     self.inputs = inputs
 
@@ -45,7 +45,6 @@ class Dense_Layer:
       self.dbiases += 2 * self.bias_regularizer_l2 * \
                         self.biases
     
-    self.dinputs = np.dot(dvalues, self.weights.T)
 
     self.dinputs = np.dot(dvalues, self.weights.T)
 
@@ -55,12 +54,17 @@ class Dropout_Layer:
   
   def __init__(self, rate):
     # Store rate, we invert it as for example for dropout
-    # of 0.1 we need success rate of 0.99
+    # of 0.1 we need success rate of 0.9
     self.rate = 1 - rate
 
-  def forward(self, inputs):
+  def forward(self, inputs, training):
     # Save input values
     self.inputs = inputs
+
+    if not training:
+      self.output = inputs.copy()
+      return
+    
     # Generate and save scaled mask
     self.binary_mask = np.random.binomial(1, self.rate,
                        size=inputs.shape) / self.rate
@@ -71,3 +75,7 @@ class Dropout_Layer:
     # Gradient on values
     self.dinputs = dvalues * self.binary_mask
                        
+
+class Input_Layer:
+  def forward(self, inputs, training):
+    self.output = inputs

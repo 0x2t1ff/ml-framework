@@ -2,99 +2,35 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import nnfs
-from nnfs.datasets import sine_data
-import matplotlib.pyplot as plt
+from nnfs.datasets import spiral_data
 from layers import *
 from activations import * 
 from losses import *
 from optimizers import *
+from models import Model
+from accuracy import *
 
 nnfs.init()
 
 # Create dataset
-X, y = sine_data()
+X, y = spiral_data(samples=1000, classes=3)
+X_test, y_test = spiral_data(samples=100, classes=3)
 
-# Create Dense layer with 1 input feature and 64 output values
-dense1 = Dense_Layer(1, 64)
+model = Model()
+model.add(Dense_Layer(2, 512, weight_regularizer_l2=5e-4,
+                             bias_regularizer_l2=5e-4))
+model.add(Activation_ReLU())
+model.add(Dropout_Layer(0.1))
+model.add(Dense_Layer(512, 3))
+model.add(Activation_Softmax())
 
-# Create ReLU activation function (to be used with Dense Layer)
-activation1 = Activation_ReLU()
+model.set(
+    loss=Loss_CategoricalCrossentropy(),
+    optimizer=Optimizer_Adam(learning_rate=0.05, decay=5e-5),
+    accuracy=Accuracy_Categorical()
 
-# Create second Dense layer with 64 input features (as we take output
-# of previous layer here) and 64 output value
-dense2 = Dense_Layer(64, 64)
-# Create ReLU activation function (to be used with Dense Layer)
-activation2 = Activation_ReLU()
+)
 
-dense3 = Dense_Layer(64, 1)
-# Create Linear activation:
-activation3 = Activation_Linear()
+model.finalize()
+model.train(X, y, validation_data=(X_test, y_test), epochs=10000, print_every=100)
 
-# Create Loss function
-loss_function = Loss_MeanSquaredError()
-
-# Create Optimizer
-optimizer = Optimizer_Adam(learning_rate=0.005, decay=1e-3)
-
-# Accuracy precision for accuracy calculation
-# There are no really accuracy factor for regression problem,
-# but we can simulate/approximate it. We'll calculate it by checking
-# how many values have a difference to their ground truth equivalent
-# less than give precision
-# We'll calculate this precision as a fraction of standard deviation
-# of all the ground truth values
-accuracy_precision = np.std(y) / 250
-
-# Train in loop
-for epoch in range(10001):
-  dense1.forward(X)
-  activation1.forward(dense1.output)
-  dense2.forward(activation1.output)
-  activation2.forward(dense2.output)
-  dense3.forward(activation2.output)
-  activation3.forward(dense3.output)
-
-  data_loss = loss_function.calculate(activation3.output, y)
-
-  regularization_loss = \
-      loss_function.regularization_loss(dense1) + \
-      loss_function.regularization_loss(dense2) 
-
-  loss = data_loss + regularization_loss
-
-  predictions = activation3.output
-  accuracy = np.mean(np.absolute(predictions - y) < \
-                      accuracy_precision)
-
-  if not epoch % 100:
-    print(f'epoch: {epoch}, ' +
-          f'acc: {accuracy:.3f}, ' +
-          f'loss: {loss:.3f}, ' +
-          f'data_loss: {data_loss:.3f}, ' +
-          f'reg_loss: {regularization_loss:.3f}, ' +
-          f'lr: {optimizer.current_learning_rate}')
-  loss_function.backward(activation3.output, y)
-  activation3.backward(loss_function.dinputs)
-  dense3.backward(activation3.dinputs)
-  activation2.backward(dense3.dinputs)
-  dense2.backward(activation2.dinputs)
-  activation1.backward(dense2.dinputs)
-  dense1.backward(activation1.dinputs)
-  optimizer.pre_update_params()
-  optimizer.update_params(dense1)
-  optimizer.update_params(dense2)
-  optimizer.update_params(dense3)
-  optimizer.post_update_params()
-  
-X_test, y_test = sine_data()
-
-dense1.forward(X_test)
-activation1.forward(dense1.output)
-dense2.forward(activation1.output)
-activation2.forward(dense2.output)
-dense3.forward(activation2.output)
-activation3.forward(dense3.output)
-
-plt.plot(X_test, y_test)
-plt.plot(X_test, activation3.output)
-plt.show()
